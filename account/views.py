@@ -1,8 +1,10 @@
 # Create your views here.
 
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from passlib.context import CryptContext
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import CreateAPIView, ListAPIView, UpdateAPIView, get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -10,6 +12,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from Product.views import UploadExcelAPIView
 from account.serializers import (UserCreateSerializer, UserSerializer, UserUpdateSerializer, UserListSerializer)
+from .models import CustomUser
 
 User = get_user_model()
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -154,7 +157,7 @@ class RegisterAPIView(CreateAPIView):
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics
 from .serializers import UserLoginSerializer
 
 class CustomAuthToken(TokenObtainPairView):
@@ -210,9 +213,11 @@ class UserInfo(APIView):
         user_serializer = UserSerializer(user)
         return Response(user_serializer.data)
 
-class UserList(APIView):
+
+class UserList(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
     authentication_classes = (JWTAuthentication,)
+    queryset = CustomUser.objects.all()
     serializer_class = UserListSerializer
-    search_fields = ['username','role']
-
+    filter_backends = (SearchFilter,)
+    search_fields = ['username', 'role']

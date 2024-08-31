@@ -4,7 +4,8 @@ import pandas as pd
 from django.utils import timezone
 from django.views.generic import DeleteView
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import status
+from rest_framework import status, generics
+from rest_framework.filters import SearchFilter
 from rest_framework.generics import ListAPIView, get_object_or_404, UpdateAPIView, CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -29,7 +30,7 @@ class UserMonthView(ListAPIView):
 
 
 class UserYearView(ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,]
     authentication_classes = [JWTAuthentication]
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend]
@@ -58,11 +59,13 @@ class DeleteUserYearProductView(APIView):
 #     queryset = Product.objects.all()
 
 
-class ProductListView(ListAPIView):
+class ProductListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication,]
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
+    filter_backends = (SearchFilter,)
+    search_fields = ['username', 'role']
 
 class ProductUpdateView(UpdateAPIView):
     permission_classes = [IsAuthenticated]
@@ -81,6 +84,13 @@ from django.http import HttpResponse, HttpResponseBadRequest
 import io
 
 
+
+import pandas as pd
+from django.http import HttpResponseBadRequest
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Product, CustomUser
+
 class UploadExcelAPIView(APIView):
     def post(self, request, *args, **kwargs):
         if not request.FILES.get('file'):
@@ -89,6 +99,7 @@ class UploadExcelAPIView(APIView):
         file = request.FILES['file']
         try:
             df = pd.read_excel(file)
+            print("Columns found in the uploaded file:", df.columns)  # Add this line to debug
 
             # Validate required columns
             required_columns = {
@@ -98,6 +109,10 @@ class UploadExcelAPIView(APIView):
             }
             if not required_columns.issubset(df.columns):
                 return HttpResponseBadRequest("Invalid file format. Required columns are missing.")
+
+            # Convert datetime fields to timezone-unaware
+            if 'date' in df.columns:
+                df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None) if pd.notnull(x) else x)
 
             # Process data and create/update products
             for _, row in df.iterrows():
@@ -131,15 +146,63 @@ class UploadExcelAPIView(APIView):
             return HttpResponseBadRequest(f"Error processing file: {str(e)}")
 
 
-class DownloadExcelAPIView(APIView):
-    def get(self, request, *args, **kwargs):
-        # Fetch products from the database
-        products = Product.objects.all().values(
+class DownloadExcelAllAPIView(APIView):
+    def get(self, request, uuid=None, *args, **kwargs):
+        # Fetch products from the database based on the user's UUID
+        products = Product.objects.filter(user__uuid=uuid).values(
             'title', 'places', 'view', 'cube', 'kg', 'cube_kg', 'price',
             'payment', 'debt', 'where_from', 'date', 'transport',
             'current_place', 'status', 'user_id'
         )
         df = pd.DataFrame(products)
+
+        # Convert datetime fields to timezone-unaware
+        if 'date' in df.columns:
+            df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None) if pd.notnull(x) else x)
+
+        # Create an Excel file
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Products')
+
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={'Content-Disposition': 'attachment; filename="products.xlsx"'}
+        )
+        return response
+
+
+class DownloadExcelFIlteredAPIView(APIView):
+    def get(self, request, uuid=None, *args, **kwargs):
+        # Get filters from query parameters
+        month = request.query_params.get('month')
+        year = request.query_params.get('year')
+
+        # Fetch products based on UUID
+        if uuid:
+            products = Product.objects.filter(user__uuid=uuid)
+        else:
+            products = Product.objects.all()
+
+        # Apply month and year filters if provided
+        if month:
+            products = products.filter(date__month=month)
+        if year:
+            products = products.filter(date__year=year)
+
+        # Serialize products
+        products_data = products.values(
+            'title', 'places', 'view', 'cube', 'kg', 'cube_kg', 'price',
+            'payment', 'debt', 'where_from', 'date', 'transport',
+            'current_place', 'status', 'user_id'
+        )
+        df = pd.DataFrame(products_data)
+
+        # Convert datetime fields to timezone-unaware
+        if 'date' in df.columns:
+            df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None) if pd.notnull(x) else x)
 
         # Create an Excel file
         buffer = io.BytesIO()
