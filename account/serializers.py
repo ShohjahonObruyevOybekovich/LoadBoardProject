@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 
 from django.contrib.auth import get_user_model, authenticate
@@ -14,21 +15,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('username','password','role')
 
-# class ConfirmationCodeSerializer(serializers.Serializer):
-#     email = serializers.EmailField()
-#     confirm_code = serializers.IntegerField()
-#
-#
-# class PasswordResetRequestSerializer(serializers.Serializer):
-#     email = serializers.EmailField()
-#
-#
-# class PasswordResetLoginSerializer(serializers.Serializer):
-#     new_password = serializers.CharField()
-#
 
-
-from account.permission import EmailAuthBackend
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(max_length=128, write_only=True)
@@ -64,12 +51,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'password','role']
 
-    def validate(self, attrs):
-        user = self.instance  # Get the user instance
-        if 'password' in attrs:
-            user.set_password(attrs['password'])
-            user.save()
-        return attrs
+    def update(self, instance, validated_data):
+
+        if 'password' in validated_data:
+            validated_data['password'] = make_password(validated_data['password'])
+        return super().update(instance, validated_data)
 #
 class UserListSerializer(ModelSerializer):
     class Meta:

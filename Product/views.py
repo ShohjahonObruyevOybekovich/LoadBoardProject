@@ -1,19 +1,21 @@
-from symtable import Class
+import io
 
 import pandas as pd
+from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
 from django.utils import timezone
-from django.views.generic import DeleteView
 from django_filters.rest_framework import DjangoFilterBackend
+from openpyxl.utils import get_column_letter
 from rest_framework import status, generics
 from rest_framework.filters import SearchFilter
-from rest_framework.generics import ListAPIView, get_object_or_404, UpdateAPIView, CreateAPIView
+from rest_framework.generics import ListAPIView, get_object_or_404, UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .Djangofilters import ProductFilter
-from .models import CustomUser, Product
+from .models import Product, CustomUser
 from .serializers import ProductSerializer
 
 
@@ -80,16 +82,7 @@ class ProductUpdateView(UpdateAPIView):
 #     queryset = Product.objects.all()
 #
 
-from django.http import HttpResponse, HttpResponseBadRequest
-import io
 
-
-
-import pandas as pd
-from django.http import HttpResponseBadRequest
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import Product, CustomUser
 
 class UploadExcelAPIView(APIView):
     def post(self, request, *args, **kwargs):
@@ -99,7 +92,7 @@ class UploadExcelAPIView(APIView):
         file = request.FILES['file']
         try:
             df = pd.read_excel(file)
-            print("Columns found in the uploaded file:", df.columns)  # Add this line to debug
+            print("Columns found in the uploaded file:", df.columns)
 
             # Validate required columns
             required_columns = {
@@ -108,10 +101,12 @@ class UploadExcelAPIView(APIView):
                 'current_place', 'status', 'user_id'
             }
             if not required_columns.issubset(df.columns):
-                return HttpResponseBadRequest("Invalid file format. Required columns are missing.")
+                missing_columns = required_columns - set(df.columns)
+                return HttpResponseBadRequest(f"Invalid file format. Missing columns: {', '.join(missing_columns)}")
 
             # Convert datetime fields to timezone-unaware
             if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'], errors='coerce')
                 df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None) if pd.notnull(x) else x)
 
             # Process data and create/update products
@@ -154,16 +149,27 @@ class DownloadExcelAllAPIView(APIView):
             'payment', 'debt', 'where_from', 'date', 'transport',
             'current_place', 'status', 'user_id'
         )
+
+        # Convert QuerySet to DataFrame
         df = pd.DataFrame(products)
 
-        # Convert datetime fields to timezone-unaware
+        # Convert datetime fields to timezone-unaware and format date
         if 'date' in df.columns:
-            df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None) if pd.notnull(x) else x)
+            df['date'] = df['date'].apply(
+                lambda x: x.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S') if pd.notnull(x) else x)
 
-        # Create an Excel file
+        # Create an Excel file in memory
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Products')
+
+            # Auto-adjust column widths
+            workbook = writer.book
+            sheet = workbook.active
+            for col_num, col in enumerate(df.columns, 1):
+                column = get_column_letter(col_num)
+                max_length = max(df[col].astype(str).apply(len).max(), len(col))
+                sheet.column_dimensions[column].width = max_length + 2  # Adjust width with a small buffer
 
         buffer.seek(0)
         response = HttpResponse(
@@ -173,8 +179,7 @@ class DownloadExcelAllAPIView(APIView):
         )
         return response
 
-
-class DownloadExcelFIlteredAPIView(APIView):
+class DownloadExcelFilteredAPIView(APIView):
     def get(self, request, uuid=None, *args, **kwargs):
         # Get filters from query parameters
         month = request.query_params.get('month')
@@ -200,9 +205,10 @@ class DownloadExcelFIlteredAPIView(APIView):
         )
         df = pd.DataFrame(products_data)
 
-        # Convert datetime fields to timezone-unaware
+        # Convert 'date' field to a timezone-unaware format and to a readable string format
         if 'date' in df.columns:
-            df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None) if pd.notnull(x) else x)
+            df['date'] = pd.to_datetime(df['date'], errors='coerce')
+            df['date'] = df['date'].apply(lambda x: x.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S') if pd.notnull(x) else '')
 
         # Create an Excel file
         buffer = io.BytesIO()

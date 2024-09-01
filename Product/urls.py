@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (
     UserMonthView, UserYearView, DeleteUserYearProductView, ProductListView,
-    UploadExcelAPIView, ProductUpdateView, DownloadExcelFIlteredAPIView, DownloadExcelAllAPIView
+    UploadExcelAPIView, ProductUpdateView, DownloadExcelAllAPIView,
+    DownloadExcelFilteredAPIView
 )
 
 urlpatterns = [
@@ -15,5 +16,5 @@ urlpatterns = [
 
     path('upload-excel/', UploadExcelAPIView.as_view(), name='upload-excel'),
     path('download-excel-all-info/<uuid:uuid>/', DownloadExcelAllAPIView.as_view(), name='download-excel'),
-    path("download-excel-filter/", DownloadExcelFIlteredAPIView.as_view(), name="download-excel-filter"),
+    path("download-excel-filter/", DownloadExcelFilteredAPIView.as_view(), name="download-excel-filter"),
 ]

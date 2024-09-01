@@ -3,7 +3,7 @@
 from django.urls import path
 
 from .views import (CustomAuthToken, LogoutAPIView, RegisterAPIView, UserUpdateAPIView,
-                    UserInfo,UserList )
+                    UserInfo, UserList, UserDeleteAPIView)
 
 urlpatterns = [
     path('token/', CustomAuthToken.as_view(), name='user_login'),
@@ -15,5 +15,6 @@ urlpatterns = [
     path('user-list/',UserList.as_view(), name='user_list'),
     path('user-update/<uuid:uuid>', UserUpdateAPIView.as_view(), name='user_update'),
     path('logout/', LogoutAPIView.as_view(), name='logout'),
-    path('user-info/',UserInfo.as_view(), name='user-info')
+    path('user-info/',UserInfo.as_view(), name='user-info'),
+    path('user-delete/<uuid:uuid>', UserDeleteAPIView.as_view(), name='user_delete'),
 ]

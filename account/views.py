@@ -1,18 +1,16 @@
 # Create your views here.
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
 from passlib.context import CryptContext
-from rest_framework.authentication import TokenAuthentication
 from rest_framework.filters import SearchFilter
-from rest_framework.generics import CreateAPIView, ListAPIView, UpdateAPIView, get_object_or_404
+from rest_framework.generics import CreateAPIView, UpdateAPIView, get_object_or_404, DestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from Product.views import UploadExcelAPIView
 from account.serializers import (UserCreateSerializer, UserSerializer, UserUpdateSerializer, UserListSerializer)
 from .models import CustomUser
+from .permission import IsAdmin
 
 User = get_user_model()
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -21,8 +19,6 @@ pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 class RegisterAPIView(CreateAPIView):
     serializer_class = UserCreateSerializer
 
-    # def generate_confirmation_code(self):
-    #     return random.randrange(10000, 99999)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -221,3 +217,9 @@ class UserList(generics.ListAPIView):
     serializer_class = UserListSerializer
     filter_backends = (SearchFilter,)
     search_fields = ['username', 'role']
+
+class UserDeleteAPIView(DestroyAPIView):
+    queryset = CustomUser.objects.all()
+    permission_classes = (IsAuthenticated, IsAdmin)
+    authentication_classes = (JWTAuthentication,)
+    lookup_field = 'uuid'
