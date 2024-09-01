@@ -75,6 +75,11 @@ class ProductUpdateView(UpdateAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
 
+    def get_object(self):
+        # Ensure that the object is retrieved based on the primary key or other identifier
+        product_id = self.kwargs.get("pk")
+        return Product.objects.get(id=product_id)
+
 # class ProductDeleteView(DeleteView):
 #     permission_classes = [IsAuthenticated]
 #     authentication_classes = [JWTAuthentication]
