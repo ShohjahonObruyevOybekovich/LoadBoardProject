@@ -148,6 +148,9 @@ class UploadExcelAPIView(APIView):
 
 class DownloadExcelAllAPIView(APIView):
     def get(self, request, uuid=None, *args, **kwargs):
+        if not uuid:
+            return HttpResponseBadRequest("UUID is required.")
+
         # Fetch products from the database based on the user's UUID
         products = Product.objects.filter(user__uuid=uuid).values(
             'title', 'places', 'view', 'cube', 'kg', 'cube_kg', 'price',
@@ -155,13 +158,17 @@ class DownloadExcelAllAPIView(APIView):
             'current_place', 'status', 'user_id'
         )
 
+        if not products.exists():
+            return HttpResponseNotFound("No products found for this user.")
+
         # Convert QuerySet to DataFrame
         df = pd.DataFrame(products)
 
         # Convert datetime fields to timezone-unaware and format date
         if 'date' in df.columns:
             df['date'] = df['date'].apply(
-                lambda x: x.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S') if pd.notnull(x) else x)
+                lambda x: x.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S') if pd.notnull(x) else x
+            )
 
         # Create an Excel file in memory
         buffer = io.BytesIO()
@@ -180,21 +187,24 @@ class DownloadExcelAllAPIView(APIView):
         response = HttpResponse(
             buffer,
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            headers={'Content-Disposition': 'attachment; filename="products.xlsx"'}
+            headers={'Content-Disposition': f'attachment; filename="products_{uuid}.xlsx"'}
         )
         return response
 
 class DownloadExcelFilteredAPIView(APIView):
     def get(self, request, uuid=None, *args, **kwargs):
+        if not uuid:
+            return HttpResponseBadRequest("UUID is required.")
+
+        # Fetch products based on UUID
+        products = Product.objects.filter(user__uuid=uuid)
+
+        if not products.exists():
+            return HttpResponseNotFound("No products found for this user.")
+
         # Get filters from query parameters
         month = request.query_params.get('month')
         year = request.query_params.get('year')
-
-        # Fetch products based on UUID
-        if uuid:
-            products = Product.objects.filter(user__uuid=uuid)
-        else:
-            products = Product.objects.all()
 
         # Apply month and year filters if provided
         if month:
@@ -224,6 +234,6 @@ class DownloadExcelFilteredAPIView(APIView):
         response = HttpResponse(
             buffer,
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            headers={'Content-Disposition': 'attachment; filename="products.xlsx"'}
+            headers={'Content-Disposition': f'attachment; filename="filtered_products_{uuid}.xlsx"'}
         )
         return response
