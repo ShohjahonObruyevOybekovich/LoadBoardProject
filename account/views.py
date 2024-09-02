@@ -2,16 +2,19 @@
 
 from django.contrib.auth import get_user_model
 from passlib.context import CryptContext
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.authtoken.models import Token
+from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import CreateAPIView, UpdateAPIView, get_object_or_404, DestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from account.serializers import (UserCreateSerializer, UserSerializer, UserUpdateSerializer, UserListSerializer)
 from .models import CustomUser
 from .permission import IsAdmin
 
+# from rest_framework_simplejwt.authentication import TokenAuthentication
 User = get_user_model()
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
@@ -150,32 +153,28 @@ class RegisterAPIView(CreateAPIView):
 #     serializer_class = UserListSerializer
 #
 
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 from rest_framework import status, generics
 from .serializers import UserLoginSerializer
 
-class CustomAuthToken(TokenObtainPairView):
+
+class CustomAuthToken(ObtainAuthToken):
     serializer_class = UserLoginSerializer
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        # role = serializer.validated_data['role']
-        refresh = RefreshToken.for_user(user)
+        token, created = Token.objects.get_or_create(user=user)
         return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            'token': token.key,
             'user_id': user.pk,
-            'username': user.username,
-            'role': user.role
-        }, status=status.HTTP_200_OK)
-
+            'email': user.email,
+            'role': user.role# Return user's email instead of username
+        })
 class UserUpdateAPIView(UpdateAPIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [TokenAuthentication]
     serializer_class = UserUpdateSerializer
 
     def get_object(self):
@@ -195,7 +194,7 @@ class UserUpdateAPIView(UpdateAPIView):
 
 class LogoutAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication,]
+    authentication_classes = [TokenAuthentication,]
 
     def post(self, request, *args, **kwargs):
         request.user.auth_token.delete()
@@ -203,7 +202,7 @@ class LogoutAPIView(APIView):
 
 class UserInfo(APIView):
     permission_classes = (IsAuthenticated,)
-    authentication_classes = (JWTAuthentication,)
+    authentication_classes = (TokenAuthentication,)
     def get(self, request):
         user = request.user
         user_serializer = UserSerializer(user)
@@ -212,7 +211,7 @@ class UserInfo(APIView):
 
 class UserList(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
-    authentication_classes = (JWTAuthentication,)
+    authentication_classes = (TokenAuthentication,)
     queryset = CustomUser.objects.all()
     serializer_class = UserListSerializer
     filter_backends = (SearchFilter,)
@@ -221,5 +220,5 @@ class UserList(generics.ListAPIView):
 class UserDeleteAPIView(DestroyAPIView):
     queryset = CustomUser.objects.all()
     permission_classes = (IsAuthenticated, IsAdmin)
-    authentication_classes = (JWTAuthentication,)
+    authentication_classes = (TokenAuthentication,)
     lookup_field = 'uuid'

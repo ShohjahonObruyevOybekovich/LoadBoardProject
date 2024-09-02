@@ -4,15 +4,19 @@ import pandas as pd
 from django.http import HttpResponse, HttpResponseNotFound
 from django.http import HttpResponseBadRequest
 from django.utils import timezone
+from django.views.generic import DeleteView
 from django_filters.rest_framework import DjangoFilterBackend
 from openpyxl.utils import get_column_letter
 from rest_framework import status, generics
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.filters import SearchFilter
-from rest_framework.generics import ListAPIView, get_object_or_404, UpdateAPIView
+from rest_framework.generics import ListAPIView, get_object_or_404, UpdateAPIView, CreateAPIView, DestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from account.permission import IsAdmin
+# from rest_framework_simplejwt.authentication import TokenAuthentication
 
 from .Djangofilters import ProductFilter
 from .models import Product, CustomUser
@@ -21,7 +25,7 @@ from .serializers import ProductSerializer
 
 class UserMonthView(ListAPIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [TokenAuthentication]
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProductFilter
@@ -33,7 +37,7 @@ class UserMonthView(ListAPIView):
 
 class UserYearView(ListAPIView):
     permission_classes = [IsAuthenticated,]
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [TokenAuthentication]
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProductFilter
@@ -46,7 +50,7 @@ class UserYearView(ListAPIView):
 
 class DeleteUserYearProductView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [TokenAuthentication]
 
     def delete(self, request, uuid, product_id):
         user = get_object_or_404(CustomUser, uuid=uuid)
@@ -54,24 +58,24 @@ class DeleteUserYearProductView(APIView):
         product.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-# class ProductCreateAPIView(CreateAPIView):
-#     permission_classes = [IsAuthenticated]
-#     authentication_classes = [JWTAuthentication]
-#     serializer_class = ProductSerializer
-#     queryset = Product.objects.all()
+class ProductCreateAPIView(CreateAPIView):
+    permission_classes = [IsAuthenticated,IsAdmin]
+    authentication_classes = [TokenAuthentication]
+    serializer_class = ProductSerializer
+    queryset = Product.objects.all()
 
 
 class ProductListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication,]
+    authentication_classes = [TokenAuthentication,]
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
     filter_backends = (SearchFilter,)
     search_fields = ['username', 'role']
 
 class ProductUpdateView(UpdateAPIView):
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated,IsAdmin]
+    authentication_classes = [TokenAuthentication]
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
 
@@ -80,12 +84,12 @@ class ProductUpdateView(UpdateAPIView):
         product_id = self.kwargs.get("pk")
         return Product.objects.get(id=product_id)
 
-# class ProductDeleteView(DeleteView):
-#     permission_classes = [IsAuthenticated]
-#     authentication_classes = [JWTAuthentication]
-#     serializer_class = ProductSerializer
-#     queryset = Product.objects.all()
-#
+class ProductDeleteView(DestroyAPIView):
+    permission_classes = [IsAuthenticated,IsAdmin]
+    authentication_classes = [TokenAuthentication]
+    serializer_class = ProductSerializer
+    queryset = Product.objects.all()
+
 
 
 
