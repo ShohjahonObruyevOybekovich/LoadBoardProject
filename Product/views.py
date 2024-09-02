@@ -1,7 +1,7 @@
 import io
 
 import pandas as pd
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 from django.http import HttpResponseBadRequest
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend

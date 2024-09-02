@@ -16,5 +16,5 @@ urlpatterns = [
 
     path('upload-excel/', UploadExcelAPIView.as_view(), name='upload-excel'),
     path('download-excel-all-info/<uuid:uuid>/', DownloadExcelAllAPIView.as_view(), name='download-excel'),
-    path("download-excel-filter/", DownloadExcelFilteredAPIView.as_view(), name="download-excel-filter"),
+    path("download-excel-filter/<uuid:uuid>/", DownloadExcelFilteredAPIView.as_view(), name="download-excel-filter"),
 ]
