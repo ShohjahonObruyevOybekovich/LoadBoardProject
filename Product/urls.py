@@ -15,7 +15,7 @@ urlpatterns = [
     path('product-update/<int:pk>/', ProductUpdateView.as_view(), name='product-update'),
     path('product-delete/<int:pk>/',ProductDeleteView.as_view(),  name='product-delete'),
 
-    path('upload-excel/', UploadExcelAPIView.as_view(), name='upload-excel'),
+    # path('upload-excel/', UploadExcelAPIView.as_view(), name='upload-excel'),
     path('download-excel-all-info/<uuid:uuid>/', DownloadExcelAllAPIView.as_view(), name='download-excel'),
     path("download-excel-filter/<uuid:uuid>/", DownloadExcelFilteredAPIView.as_view(), name="download-excel-filter"),
 ]

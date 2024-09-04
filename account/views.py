@@ -169,8 +169,6 @@ class CustomAuthToken(ObtainAuthToken):
         return Response({
             'token': token.key,
             'user_id': user.pk,
-            'email': user.email,
-            'role': user.role# Return user's email instead of username
         })
 class UserUpdateAPIView(UpdateAPIView):
     permission_classes = [IsAuthenticated]

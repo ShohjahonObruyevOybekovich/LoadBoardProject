@@ -20,7 +20,7 @@ from account.permission import IsAdmin
 
 from .Djangofilters import ProductFilter
 from .models import Product, CustomUser
-from .serializers import ProductSerializer
+from .serializers import ProductSerializer, ProductCreateSerializer
 
 
 class UserMonthView(ListAPIView):
@@ -58,12 +58,13 @@ class DeleteUserYearProductView(APIView):
         product.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class ProductCreateAPIView(CreateAPIView):
-    permission_classes = [IsAuthenticated,IsAdmin]
-    authentication_classes = [TokenAuthentication]
-    serializer_class = ProductSerializer
-    queryset = Product.objects.all()
+from rest_framework.exceptions import ValidationError
 
+class ProductCreateAPIView(CreateAPIView):
+    permission_classes = [IsAuthenticated, ]
+    authentication_classes = [TokenAuthentication]
+    serializer_class = ProductCreateSerializer
+    queryset = Product.objects.all()
 
 class ProductListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -74,7 +75,7 @@ class ProductListView(generics.ListAPIView):
     search_fields = ['username', 'role']
 
 class ProductUpdateView(UpdateAPIView):
-    permission_classes = [IsAuthenticated,IsAdmin]
+    permission_classes = [IsAuthenticated]
     authentication_classes = [TokenAuthentication]
     serializer_class = ProductSerializer
     queryset = Product.objects.all()

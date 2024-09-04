@@ -18,5 +18,5 @@ urlpatterns = [
     path('logout/', LogoutAPIView.as_view(), name='logout'),
     path('user-info/',UserInfo.as_view(), name='user-info'),
     path('user-delete/<uuid:uuid>', UserDeleteAPIView.as_view(), name='user_delete'),
-    path('api-token-auth/', obtain_auth_token, name='api_token_auth')
+    # path('api-token-auth/', obtain_auth_token, name='api_token_auth')
 ]
