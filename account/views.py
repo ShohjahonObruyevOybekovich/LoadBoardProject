@@ -169,6 +169,7 @@ class CustomAuthToken(ObtainAuthToken):
         return Response({
             'token': token.key,
             'user_id': user.pk,
+            "role": user.role,
         })
 class UserUpdateAPIView(UpdateAPIView):
     permission_classes = [IsAuthenticated]

@@ -19,17 +19,17 @@ class UserCreateSerializer(serializers.ModelSerializer):
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(max_length=128, write_only=True)
-    # role = serializers.CharField(max_length=50)
+    role = serializers.CharField(max_length=50)
 
     def validate(self, attrs):
         username = attrs.get('username')
         password = attrs.get('password')
-        # role = attrs.get('role')
+        role = attrs.get('role')
 
 
-        if username and password :
+        if username and password and role:
 
-            user = authenticate(request=self.context.get('request'), username=username, password=password)
+            user = authenticate(request=self.context.get('request'), username=username, password=password, role=role)
             if not user:
                 msg = 'Unable to log in with provided credentials.'
                 raise serializers.ValidationError(msg, code='authorization')
