@@ -20,7 +20,7 @@ from account.permission import IsAdmin
 
 from .Djangofilters import ProductFilter
 from .models import Product, CustomUser
-from .serializers import ProductSerializer, ProductCreateSerializer
+from .serializers import ProductSerializer, ProductCreateSerializer, ProductUpdateSerializer
 
 
 class UserMonthView(ListAPIView):
@@ -58,7 +58,8 @@ class DeleteUserYearProductView(APIView):
         product.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
+
 
 class ProductCreateAPIView(CreateAPIView):
     permission_classes = [IsAuthenticated, ]
@@ -77,14 +78,36 @@ class ProductListView(generics.ListAPIView):
 class ProductUpdateView(UpdateAPIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [TokenAuthentication]
-    serializer_class = ProductSerializer
+    serializer_class = ProductUpdateSerializer
     queryset = Product.objects.all()
 
     def get_object(self):
-        # Ensure that the object is retrieved based on the primary key or other identifier
+        # Ensure that the object is retrieved based on the primary key
         product_id = self.kwargs.get("pk")
         return Product.objects.get(id=product_id)
 
+    def perform_update(self, serializer):
+        user = self.request.user
+        product = self.get_object()
+
+        # If the user is an admin, they can update the user
+        if user.is_staff:
+            # Update the product with the provided user UUID
+            user_uuid = self.request.data.get('user_uuid')
+            if user_uuid:
+                try:
+                    new_user = CustomUser.objects.get(uuid=user_uuid)
+                    serializer.save(user=new_user)
+                except CustomUser.DoesNotExist:
+                    raise PermissionDenied("User with this UUID does not exist.")
+            else:
+                # If no user_uuid is provided, the admin retains the current user
+                serializer.save(user=product.user)
+        else:
+            # Regular users can only update their own product
+            if product.user != user:
+                raise PermissionDenied("You do not have permission to update this product.")
+            serializer.save(user=user)
 class ProductDeleteView(DestroyAPIView):
     permission_classes = [IsAuthenticated,IsAdmin]
     authentication_classes = [TokenAuthentication]
