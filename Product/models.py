@@ -29,4 +29,4 @@ class Product(models.Model):
         ('Завершен', 'Завершен'),
     ]
     status = models.CharField(max_length=50, choices=STATUS_CHOICES)
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='products')
+    # user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='products')

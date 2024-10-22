@@ -34,3 +34,4 @@ class IsAdmin(BasePermission):
     def has_permission(self, request, view):
         # Check if the user is authenticated and has the role 'admin'
         return request.user.is_authenticated and request.user.role == 'admin'
+

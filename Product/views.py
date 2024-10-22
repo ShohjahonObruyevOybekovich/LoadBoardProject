@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.views.generic import DeleteView
 from django_filters.rest_framework import DjangoFilterBackend
 from openpyxl.utils import get_column_letter
-from rest_framework import status, generics
+from rest_framework import status, generics, permissions
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import ListAPIView, get_object_or_404, UpdateAPIView, CreateAPIView, DestroyAPIView
@@ -265,3 +265,9 @@ class DownloadExcelFilteredAPIView(APIView):
             headers={'Content-Disposition': f'attachment; filename="filtered_products_{uuid}.xlsx"'}
         )
         return response
+
+class Producttestcreate(CreateAPIView):
+    serializer_class = ProductCreateSerializer
+    queryset = Product.objects.all()
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]

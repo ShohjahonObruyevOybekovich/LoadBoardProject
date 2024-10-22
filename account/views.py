@@ -7,7 +7,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import CreateAPIView, UpdateAPIView, get_object_or_404, DestroyAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 
 from account.serializers import (UserCreateSerializer, UserSerializer, UserUpdateSerializer, UserListSerializer)
@@ -28,9 +28,9 @@ class RegisterAPIView(CreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         # email = serializer.validated_data['email']
-        password = serializer.validated_data['password']
-        username = serializer.validated_data['username']
-        role = serializer.validated_data['role']
+        password = serializer.validated_data.get('password')
+        username = serializer.validated_data.get('username')
+        role = serializer.validated_data.get('role')
         if not User.objects.filter(username=username).exists():
             User.objects.create_user(
                 # email=email,

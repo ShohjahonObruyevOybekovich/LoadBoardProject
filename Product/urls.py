@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     UserMonthView, UserYearView, DeleteUserYearProductView, ProductListView,
     UploadExcelAPIView, ProductUpdateView, DownloadExcelAllAPIView,
-    DownloadExcelFilteredAPIView, ProductCreateAPIView,ProductDeleteView
+    DownloadExcelFilteredAPIView, ProductCreateAPIView, ProductDeleteView, Producttestcreate
 )
 
 urlpatterns = [
@@ -18,4 +18,6 @@ urlpatterns = [
     # path('upload-excel/', UploadExcelAPIView.as_view(), name='upload-excel'),
     path('download-excel-all-info/<uuid:uuid>/', DownloadExcelAllAPIView.as_view(), name='download-excel'),
     path("download-excel-filter/<uuid:uuid>/", DownloadExcelFilteredAPIView.as_view(), name="download-excel-filter"),
+    path('product-test-create/', Producttestcreate.as_view(), name = 'product-test-craete')
+    ,
 ]
